@@ -37,6 +37,7 @@ textPosition_t scrollAlign = PA_LEFT;
 uint16_t scrollPause = 1000; // in milliseconds
 // Global message buffers shared by Serial and Scrolling functions
 #define	BUF_SIZE	75
+char startMessage[BUF_SIZE] = {"Scrolly boi"};
 char message[BUF_SIZE] = {"Apoorva sucks"};
 
 //PIR variables
@@ -45,9 +46,13 @@ volatile byte motion = 0;
 void setup(){
   Serial.begin(115200);
   Serial.println("\nPIR Scrolly boi. Trigger me by walking in front of the sensor");
-
+  pinMode(PIR_PIN, INPUT);
+  
   P.begin();
-  P.displayText(message, scrollAlign, scrollSpeed, scrollPause, scrollEffect, scrollEffect);
+  P.displayText(startMessage, scrollAlign, scrollSpeed, scrollPause, scrollEffect, scrollEffect);
+//  delay(1000);
+  P.displayClear();
+//  attachInterrupt(digitalPinToInterrupt(PIR_PIN), motion, RISING);
 }
 
 void loop(){
@@ -55,4 +60,12 @@ void loop(){
     P.displayReset();
     P.displayText(message, scrollAlign, scrollSpeed, scrollPause, scrollEffect, scrollEffect);
   }
+  
+  motion = digitalRead(PIR_PIN);
+  Serial.print("PIR state: ");
+  Serial.println(motion);
 }
+
+//void motion() {
+//  state = !state;
+//}
