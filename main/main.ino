@@ -55,15 +55,19 @@ void setup(){
 }
 
 void loop(){
-  if (P.displayAnimate()){
-    P.displayReset();
-    P.displayText(message, scrollAlign, scrollSpeed, scrollPause, scrollEffect, scrollEffect);
-  }
   if(motion == 1){
     detachInterrupt(digitalPinToInterrupt(PIR_PIN));
     Serial.print("PIR state: ");
     Serial.println(motion);
-    delay(100);
+
+    uint8_t nLoops = 0; //number of times to display the message
+    while(nLoops < 2){
+      if (P.displayAnimate()){
+        P.displayReset();
+        P.displayText(message, scrollAlign, scrollSpeed, scrollPause, scrollEffect, scrollEffect);
+        nLoops++;
+      }
+    }
     motion = 0;
     attachInterrupt(digitalPinToInterrupt(PIR_PIN), isr, RISING);
   }
