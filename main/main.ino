@@ -37,7 +37,7 @@ uint16_t scrollPause = 1000; // in milliseconds
 #define	BUF_SIZE	75
 #define NUM_MSGS 6
 char startMessage[BUF_SIZE] = {"Scrolly boi V1"};
-char message[NUM_MSGS][BUF_SIZE] = {
+char message[NUM_MSGS][BUF_SIZE] = {  //display messages - max length 75 characters
                                     "UU > QUB",
                                     "Welcome to No.42",
                                     "The mitochondria are the powerhouse of the cell",
@@ -77,7 +77,7 @@ void loop(){
       }
     }
     motion = 0; //reset the flag
-    attachInterrupt(digitalPinToInterrupt(PIR_PIN), isr, RISING);
+    attachInterrupt(digitalPinToInterrupt(PIR_PIN), isr, RISING); //re-attach interrupt
   }
 }
 
