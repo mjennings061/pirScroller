@@ -50,6 +50,9 @@ void setup(){
   
   P.begin();
   P.displayText(startMessage, scrollAlign, scrollSpeed, scrollPause, scrollEffect, scrollEffect);
+  while(!P.displayAnimate()){
+    ;
+  }
   P.displayClear();
   attachInterrupt(digitalPinToInterrupt(PIR_PIN), isr, RISING);
 }
@@ -57,8 +60,7 @@ void setup(){
 void loop(){
   if(motion == 1){
     detachInterrupt(digitalPinToInterrupt(PIR_PIN));
-    Serial.print("PIR state: ");
-    Serial.println(motion);
+    Serial.print("Triggered - REEEE");
 
     uint8_t nLoops = 0; //number of times to display the message
     while(nLoops < 2){
