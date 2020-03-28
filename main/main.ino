@@ -50,9 +50,8 @@ void setup(){
   
   P.begin();
   P.displayText(startMessage, scrollAlign, scrollSpeed, scrollPause, scrollEffect, scrollEffect);
-//  delay(1000);
   P.displayClear();
-//  attachInterrupt(digitalPinToInterrupt(PIR_PIN), motion, RISING);
+  attachInterrupt(digitalPinToInterrupt(PIR_PIN), isr, RISING);
 }
 
 void loop(){
@@ -60,12 +59,16 @@ void loop(){
     P.displayReset();
     P.displayText(message, scrollAlign, scrollSpeed, scrollPause, scrollEffect, scrollEffect);
   }
-  
-  motion = digitalRead(PIR_PIN);
-  Serial.print("PIR state: ");
-  Serial.println(motion);
+  if(motion == 1){
+    detachInterrupt(digitalPinToInterrupt(PIR_PIN));
+    Serial.print("PIR state: ");
+    Serial.println(motion);
+    delay(100);
+    motion = 0;
+    attachInterrupt(digitalPinToInterrupt(PIR_PIN), isr, RISING);
+  }
 }
 
-//void motion() {
-//  state = !state;
-//}
+void isr() {
+  motion = 1;
+}
