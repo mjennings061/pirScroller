@@ -6,5 +6,4 @@
 - MD_MAX72xx.h
 
 ### Contact Details
-Michael Jennings
-mjennings061@gmail.com
+Michael Jennings: mjennings061@gmail.com
