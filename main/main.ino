@@ -1,9 +1,7 @@
-// User can enter text on the serial monitor and this will display as a
-// scrolling message on the display.
-// Speed for the display is controlled by a pot on SPEED_IN analog in.
-// Scrolling direction is controlled by a switch on DIRECTION_SET digital in.
-// Invert ON/OFF is set by a switch on INVERT_SET digital in.
-
+/*
+ * pirScroller
+ * Preset message will be displayed on a 32x8 LED matrix when a PIR sensor is triggered
+*/
 
 #include <MD_Parola.h>
 #include <MD_MAX72xx.h>
@@ -29,35 +27,32 @@
 #define CLK_PIN   13
 #define DATA_PIN  11
 #define CS_PIN    10
+#define PIR_PIN   2
 
-// HARDWARE SPI
+// LED matrix variables
 MD_Parola P = MD_Parola(HARDWARE_TYPE, CS_PIN, MAX_DEVICES);
-
 uint8_t scrollSpeed = 25;    // default frame delay value
 textEffect_t scrollEffect = PA_SCROLL_LEFT;
 textPosition_t scrollAlign = PA_LEFT;
 uint16_t scrollPause = 1000; // in milliseconds
-
 // Global message buffers shared by Serial and Scrolling functions
 #define	BUF_SIZE	75
-char curMessage[BUF_SIZE] = {""};
-char newMessage[BUF_SIZE] = {"Apoorva sucks"};
-bool newMessageAvailable = true;
+char message[BUF_SIZE] = {"Apoorva sucks"};
+
+//PIR variables
+volatile byte motion = 0;
 
 void setup(){
   Serial.begin(115200);
   Serial.println("\nPIR Scrolly boi. Trigger me by walking in front of the sensor");
 
   P.begin();
-  P.displayText(curMessage, scrollAlign, scrollSpeed, scrollPause, scrollEffect, scrollEffect);
+  P.displayText(message, scrollAlign, scrollSpeed, scrollPause, scrollEffect, scrollEffect);
 }
 
 void loop(){
   if (P.displayAnimate()){
-    if (newMessageAvailable){
-      strcpy(curMessage, newMessage);
-      newMessageAvailable = false;
-    }
     P.displayReset();
+    P.displayText(message, scrollAlign, scrollSpeed, scrollPause, scrollEffect, scrollEffect);
   }
 }
