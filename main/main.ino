@@ -27,6 +27,7 @@
 #define DATA_PIN  11  //data pin
 #define CS_PIN    10  //clock select pin
 #define PIR_PIN   2   //PIR pin
+#define BAT_PIN   A4  //battery pin
 
 // LED matrix variables
 MD_Parola P = MD_Parola(HARDWARE_TYPE, CS_PIN, MAX_DEVICES);
@@ -46,6 +47,7 @@ char message[NUM_MSGS][BUF_SIZE] = {  //display messages - max length 75 charact
                                     "Target spotted"
                                     };
 volatile byte motion = 0; //ISR trigger for the PIR sensor
+bool lowBat = 0;  //set to 1 when battery is below 3.2V
 
 void setup(){
   #ifdef DEBUG  // only use UART when DEBUG is enables
@@ -53,8 +55,10 @@ void setup(){
   #endif
   PRINTS("\nPIR Scrolly boi. Trigger me by walking in front of the sensor");
   pinMode(PIR_PIN, INPUT);
+  pinMode(BAT_PIN, INPUT);
   randomSeed(analogRead(0)); //for the random num generator
-  
+
+  //setip the display
   P.begin();
   P.displayText(startMessage, scrollAlign, scrollSpeed, scrollPause, scrollEffect, scrollEffect); //starting message
   while(!P.displayAnimate()){;} //scroll the text once
@@ -64,7 +68,10 @@ void setup(){
 
 void loop(){
   if(motion == 1){
-    scrollMessage();
+    checkBattery();
+    if(lowBat == 0){
+      scrollMessage();
+    }
   }
 }
 
@@ -79,7 +86,6 @@ void scrollMessage(){
   uint8_t iMsg = random(NUM_MSGS);  //pick a random message to display
   PRINTS("Message no.: ");
   PRINTS(iMsg);
-  PRINTS("\n");
   uint8_t nLoops = 0; //number of times to display the message
   P.displayReset();
   P.displayText(message[iMsg], scrollAlign, scrollSpeed, scrollPause, scrollEffect, scrollEffect);  //display a random message
@@ -92,9 +98,35 @@ void scrollMessage(){
   motion = 0; //reset the flag
   attachInterrupt(digitalPinToInterrupt(PIR_PIN), isr, RISING); //re-attach interrupt
 }
+
+void checkBattery(){
+  int batIn = analogRead(BAT_PIN);
+  float batVoltage = batIn*(5.0/1023.0);
+  PRINTS("\nBattery: ");
+  PRINTS(batVoltage);
+  if(batVoltage < 3.2) {  //scroll "Low Battery" when voltage below 3.2V
+    lowBat = 1;
+    detachInterrupt(digitalPinToInterrupt(PIR_PIN));  //stop the interrupt from being called during processing
+    uint8_t nLoops = 0; //number of times to display the message
+    P.displayReset();
+    P.displayText("Low Battery", scrollAlign, scrollSpeed, scrollPause, scrollEffect, scrollEffect);  //display a random message
+    while(nLoops < 2){  //wait until the message has displayed twice
+      if (P.displayAnimate()){  //update the display (call repeatedly)
+        P.displayReset(); 
+        nLoops++; //
+      }
+    }
+    motion = 0; //reset the flag
+    attachInterrupt(digitalPinToInterrupt(PIR_PIN), isr, RISING); //re-attach interrupt
+  }
+  else {
+    lowBat = 0;
+  }
+}
+
 /*
  * To-do
- * - Put ISR-based scroll into its own function
  * - Add a battery check feature on A4
  * - Add a conditional scroll if the battery is low
+ * - Sleep mode to conserve battery
  */
