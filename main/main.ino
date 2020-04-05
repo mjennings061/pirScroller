@@ -1,6 +1,8 @@
 /*
  * pirScroller
  * Preset message will be displayed on a 32x8 LED matrix when a PIR sensor is triggered
+ * Copyright: Michael Jennings - www.github.com/mjennings061/
+ * Last Updated: 05/04/2020
 */
 
 #include <MD_Parola.h>
@@ -8,7 +10,7 @@
 #include <SPI.h>
 
 // Turn on debug statements to the serial output
-#define DEBUG 0 // Switch debug output on and off by 1 or 0
+#define DEBUG 1 // Switch debug output on and off by 1 or 0
 
 #if DEBUG
 #define PRINTS(s)   { Serial.print(s); }
@@ -41,13 +43,12 @@ char message[NUM_MSGS][BUF_SIZE] = {  //display messages - max length 75 charact
                                     "Don't let your dreams be memes",
                                     "The mitochondria are the powerhouses of the cell",
                                     "I am a PIR sensor",
-                                    "I can see you ;)",
                                     "Target spotted"
                                     };
 volatile byte motion = 0; //ISR trigger for the PIR sensor
 
 void setup(){
-  #ifdef DEBUG
+  #ifdef DEBUG  // only use UART when DEBUG is enables
     Serial.begin(115200);
   #endif
   PRINTS("\nPIR Scrolly boi. Trigger me by walking in front of the sensor");
@@ -63,23 +64,7 @@ void setup(){
 
 void loop(){
   if(motion == 1){
-    detachInterrupt(digitalPinToInterrupt(PIR_PIN));  //stop the interrupt from being called during processing
-    PRINTS("\nTriggered - REEEE\t");
-    uint8_t iMsg = random(NUM_MSGS);  //pick a random message to display
-    PRINTS("Message no.: ");
-    PRINTS(iMsg);
-    PRINTS("\n");
-    uint8_t nLoops = 0; //number of times to display the message
-    P.displayReset();
-    P.displayText(message[iMsg], scrollAlign, scrollSpeed, scrollPause, scrollEffect, scrollEffect);  //display a random message
-    while(nLoops < 2){  //wait until the message has displayed twice
-      if (P.displayAnimate()){  //update the display (call repeatedly)
-        P.displayReset(); 
-        nLoops++; //
-      }
-    }
-    motion = 0; //reset the flag
-    attachInterrupt(digitalPinToInterrupt(PIR_PIN), isr, RISING); //re-attach interrupt
+    scrollMessage();
   }
 }
 
@@ -87,3 +72,29 @@ void loop(){
 void isr() { 
   motion = 1;
 }
+
+void scrollMessage(){
+  detachInterrupt(digitalPinToInterrupt(PIR_PIN));  //stop the interrupt from being called during processing
+  PRINTS("\nTriggered - REEEE\t");
+  uint8_t iMsg = random(NUM_MSGS);  //pick a random message to display
+  PRINTS("Message no.: ");
+  PRINTS(iMsg);
+  PRINTS("\n");
+  uint8_t nLoops = 0; //number of times to display the message
+  P.displayReset();
+  P.displayText(message[iMsg], scrollAlign, scrollSpeed, scrollPause, scrollEffect, scrollEffect);  //display a random message
+  while(nLoops < 2){  //wait until the message has displayed twice
+    if (P.displayAnimate()){  //update the display (call repeatedly)
+      P.displayReset(); 
+      nLoops++; //
+    }
+  }
+  motion = 0; //reset the flag
+  attachInterrupt(digitalPinToInterrupt(PIR_PIN), isr, RISING); //re-attach interrupt
+}
+/*
+ * To-do
+ * - Put ISR-based scroll into its own function
+ * - Add a battery check feature on A4
+ * - Add a conditional scroll if the battery is low
+ */
