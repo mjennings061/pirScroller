@@ -11,7 +11,7 @@
 #include <avr/sleep.h>
 
 // Turn on debug statements to the serial output
-#define DEBUG 0 // Switch debug output on and off by 1 or 0
+#define DEBUG 1 // Switch debug output on and off by 1 or 0
 #if DEBUG
 #define PRINTS(s)   { Serial.print(s); }
 #else
@@ -65,25 +65,25 @@ void setup(){
   P.displayText(startMessage, scrollAlign, scrollSpeed, scrollPause, scrollEffect, scrollEffect); //starting message
   while(!P.displayAnimate()){;} //scroll the text once
   P.displayClear();
+  delay(1000);
 }
 
 ///////////// MAIN LOOP //////////////////
 void loop(){
+  goToSleep();
   if(motion == 1){
     checkBattery();
     if(lowBat == 0){
       scrollMessage();
     }
   }
-  delay(1000);
-  goToSleep();
 }
 
 // Interrupt service routine
 void isr() { 
+  detachInterrupt(digitalPinToInterrupt(PIR_PIN));  //stop the interrupt from being called during processing
   motion = 1; //set motion variable
   sleep_disable();  //wake up
-  detachInterrupt(digitalPinToInterrupt(PIR_PIN));  //stop the interrupt from being called during processing
 }
 
 // Random message scroller
@@ -110,6 +110,7 @@ void checkBattery(){
   float batVoltage = batIn*(5.0/1023.0);
   PRINTS("\nBattery: ");
   PRINTS(batVoltage);
+  PRINTS("V");
   if(batVoltage < 3.2) {  //scroll "Low Battery" when voltage below 3.2V
     lowBat = 1;
     uint8_t nLoops = 0; //number of times to display the message
@@ -130,11 +131,12 @@ void checkBattery(){
 
 void goToSleep(){
   PRINTS("\nSleep time\n");
-  delay(100);
   sleep_enable(); // enable sleep mode
   attachInterrupt(digitalPinToInterrupt(PIR_PIN), isr, RISING); //start the PIR interrupt
-  set_sleep_mode(SLEEP_MODE_PWR_DOWN);
+  set_sleep_mode(SLEEP_MODE_EXT_STANDBY);
+  delay(100);
   sleep_cpu();
+  delay(10);
 }
 
 /*
