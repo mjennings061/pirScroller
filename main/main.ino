@@ -8,13 +8,12 @@
 #include <SPI.h>
 
 // Turn on debug statements to the serial output
-#define DEBUG 1// enables debug serial prints
-#ifdef DEBUG
-#define DEBUG_PRINT(x)      Serial.print (x)
-#define DEBUG_PRINTLN(x)  Serial.println (x)
+#define DEBUG 0 // Switch debug output on and off by 1 or 0
+
+#if DEBUG
+#define PRINTS(s)   { Serial.print(s); }
 #else
-#define DEBUG_PRINT(x)
-#define DEBUG_PRINTLN(x)
+#define PRINTS(s)
 #endif
 
 // Define the number of devices we have in the chain and the hardware interface
@@ -29,7 +28,7 @@
 
 // LED matrix variables
 MD_Parola P = MD_Parola(HARDWARE_TYPE, CS_PIN, MAX_DEVICES);
-uint8_t scrollSpeed = 25;    // default frame delay value
+uint8_t scrollSpeed = 35;    // default frame delay value
 textEffect_t scrollEffect = PA_SCROLL_LEFT;
 textPosition_t scrollAlign = PA_LEFT;
 uint16_t scrollPause = 1000; // in milliseconds
@@ -38,9 +37,9 @@ uint16_t scrollPause = 1000; // in milliseconds
 #define NUM_MSGS 6
 char startMessage[BUF_SIZE] = {"Scrolly boi V1"};
 char message[NUM_MSGS][BUF_SIZE] = {  //display messages - max length 75 characters
-                                    "UU > QUB",
                                     "Welcome to No.42",
-                                    "The mitochondria are the powerhouse of the cell",
+                                    "Don't let your dreams be memes",
+                                    "The mitochondria are the powerhouses of the cell",
                                     "I am a PIR sensor",
                                     "I can see you ;)",
                                     "Target spotted"
@@ -48,8 +47,10 @@ char message[NUM_MSGS][BUF_SIZE] = {  //display messages - max length 75 charact
 volatile byte motion = 0; //ISR trigger for the PIR sensor
 
 void setup(){
-  Serial.begin(115200);
-  DEBUG_PRINTLN("\nPIR Scrolly boi. Trigger me by walking in front of the sensor");
+  #ifdef DEBUG
+    Serial.begin(115200);
+  #endif
+  PRINTS("\nPIR Scrolly boi. Trigger me by walking in front of the sensor");
   pinMode(PIR_PIN, INPUT);
   randomSeed(analogRead(0)); //for the random num generator
   
@@ -63,10 +64,11 @@ void setup(){
 void loop(){
   if(motion == 1){
     detachInterrupt(digitalPinToInterrupt(PIR_PIN));  //stop the interrupt from being called during processing
-    DEBUG_PRINT("Triggered - REEEE\t");
+    PRINTS("\nTriggered - REEEE\t");
     uint8_t iMsg = random(NUM_MSGS);  //pick a random message to display
-    DEBUG_PRINT("Message no.: ");
-    DEBUG_PRINTLN(iMsg);
+    PRINTS("Message no.: ");
+    PRINTS(iMsg);
+    PRINTS("\n");
     uint8_t nLoops = 0; //number of times to display the message
     P.displayReset();
     P.displayText(message[iMsg], scrollAlign, scrollSpeed, scrollPause, scrollEffect, scrollEffect);  //display a random message
