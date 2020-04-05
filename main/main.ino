@@ -11,7 +11,7 @@
 #include <avr/sleep.h>
 
 // Turn on debug statements to the serial output
-#define DEBUG 1 // Switch debug output on and off by 1 or 0
+#define DEBUG 0 // Switch debug output on and off by 1 or 0
 #if DEBUG
 #define PRINTS(s)   { Serial.print(s); }
 #else
@@ -37,14 +37,15 @@ textPosition_t scrollAlign = PA_LEFT;
 uint16_t scrollPause = 1000; // in milliseconds
 // Global message buffers shared by Serial and Scrolling functions
 #define	BUF_SIZE	75
-#define NUM_MSGS 6
+#define NUM_MSGS 6  //update this with the number of messages
 char startMessage[BUF_SIZE] = {"Scrolly boi V1"};
 char message[NUM_MSGS][BUF_SIZE] = {  //display messages - max length 75 characters
                                     "Welcome to No.42",
-                                    "Don't let your dreams be memes",
+                                    "Don't let your memes be dreams",
                                     "The mitochondria are the powerhouses of the cell",
                                     "I am a PIR sensor",
-                                    "Target spotted"
+                                    "We are bored students",
+                                    "Delivery drivers are great people"
                                     };
 volatile byte motion = 0; //ISR trigger for the PIR sensor
 bool lowBat = 0;  //set to 1 when battery is below 3.2V
@@ -128,7 +129,7 @@ void checkBattery(){
 }
 
 void goToSleep(){
-  PRINTS("\nSleep time");
+  PRINTS("\nSleep time\n");
   delay(100);
   sleep_enable(); // enable sleep mode
   attachInterrupt(digitalPinToInterrupt(PIR_PIN), isr, RISING); //start the PIR interrupt
@@ -138,5 +139,5 @@ void goToSleep(){
 
 /*
  * To-do
- * - Sleep mode to conserve battery
+ * - More noticable low battery warning
  */
