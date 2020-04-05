@@ -8,10 +8,10 @@
 #include <MD_Parola.h>
 #include <MD_MAX72xx.h>
 #include <SPI.h>
+#include <avr/sleep.h>
 
 // Turn on debug statements to the serial output
 #define DEBUG 1 // Switch debug output on and off by 1 or 0
-
 #if DEBUG
 #define PRINTS(s)   { Serial.print(s); }
 #else
@@ -49,6 +49,7 @@ char message[NUM_MSGS][BUF_SIZE] = {  //display messages - max length 75 charact
 volatile byte motion = 0; //ISR trigger for the PIR sensor
 bool lowBat = 0;  //set to 1 when battery is below 3.2V
 
+///////////// SETUP //////////////////
 void setup(){
   #ifdef DEBUG  // only use UART when DEBUG is enables
     Serial.begin(115200);
@@ -63,9 +64,9 @@ void setup(){
   P.displayText(startMessage, scrollAlign, scrollSpeed, scrollPause, scrollEffect, scrollEffect); //starting message
   while(!P.displayAnimate()){;} //scroll the text once
   P.displayClear();
-  attachInterrupt(digitalPinToInterrupt(PIR_PIN), isr, RISING); //start the PIR interrupt
 }
 
+///////////// MAIN LOOP //////////////////
 void loop(){
   if(motion == 1){
     checkBattery();
@@ -73,15 +74,19 @@ void loop(){
       scrollMessage();
     }
   }
+  delay(1000);
+  goToSleep();
 }
 
 // Interrupt service routine
 void isr() { 
-  motion = 1;
+  motion = 1; //set motion variable
+  sleep_disable();  //wake up
+  detachInterrupt(digitalPinToInterrupt(PIR_PIN));  //stop the interrupt from being called during processing
 }
 
+// Random message scroller
 void scrollMessage(){
-  detachInterrupt(digitalPinToInterrupt(PIR_PIN));  //stop the interrupt from being called during processing
   PRINTS("\nTriggered - REEEE\t");
   uint8_t iMsg = random(NUM_MSGS);  //pick a random message to display
   PRINTS("Message no.: ");
@@ -96,9 +101,9 @@ void scrollMessage(){
     }
   }
   motion = 0; //reset the flag
-  attachInterrupt(digitalPinToInterrupt(PIR_PIN), isr, RISING); //re-attach interrupt
 }
 
+// Report battery voltage and set lowBat
 void checkBattery(){
   int batIn = analogRead(BAT_PIN);
   float batVoltage = batIn*(5.0/1023.0);
@@ -106,7 +111,6 @@ void checkBattery(){
   PRINTS(batVoltage);
   if(batVoltage < 3.2) {  //scroll "Low Battery" when voltage below 3.2V
     lowBat = 1;
-    detachInterrupt(digitalPinToInterrupt(PIR_PIN));  //stop the interrupt from being called during processing
     uint8_t nLoops = 0; //number of times to display the message
     P.displayReset();
     P.displayText("Low Battery", scrollAlign, scrollSpeed, scrollPause, scrollEffect, scrollEffect);  //display a random message
@@ -117,16 +121,22 @@ void checkBattery(){
       }
     }
     motion = 0; //reset the flag
-    attachInterrupt(digitalPinToInterrupt(PIR_PIN), isr, RISING); //re-attach interrupt
   }
   else {
-    lowBat = 0;
+    lowBat = 0; // battery is not low
   }
+}
+
+void goToSleep(){
+  PRINTS("\nSleep time");
+  delay(100);
+  sleep_enable(); // enable sleep mode
+  attachInterrupt(digitalPinToInterrupt(PIR_PIN), isr, RISING); //start the PIR interrupt
+  set_sleep_mode(SLEEP_MODE_PWR_DOWN);
+  sleep_cpu();
 }
 
 /*
  * To-do
- * - Add a battery check feature on A4
- * - Add a conditional scroll if the battery is low
  * - Sleep mode to conserve battery
  */
