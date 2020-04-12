@@ -2,16 +2,16 @@
  * pirScroller
  * Preset message will be displayed on a 32x8 LED matrix when a PIR sensor is triggered
  * Copyright: Michael Jennings - www.github.com/mjennings061/
- * Last Updated: 05/04/2020
+ * Last Updated: 12/04/2020
 */
 
 #include <MD_Parola.h>
 #include <MD_MAX72xx.h>
 #include <SPI.h>
-#include <avr/sleep.h>
+//#include <avr/sleep.h>
 
 // Turn on debug statements to the serial output
-#define DEBUG 1 // Switch debug output on and off by 1 or 0
+#define DEBUG 0 // Switch debug output on and off by 1 or 0
 #if DEBUG
 #define PRINTS(s)   { Serial.print(s); }
 #else
@@ -48,7 +48,6 @@ char message[NUM_MSGS][BUF_SIZE] = {  //display messages - max length 75 charact
                                     "Delivery drivers are great people"
                                     };
 volatile byte motion = 0; //ISR trigger for the PIR sensor
-bool lowBat = 0;  //set to 1 when battery is below 3.2V
 
 ///////////// SETUP //////////////////
 void setup(){
@@ -66,16 +65,24 @@ void setup(){
   while(!P.displayAnimate()){;} //scroll the text once
   P.displayClear();
   delay(1000);
+  attachInterrupt(digitalPinToInterrupt(PIR_PIN), isr, RISING); //start the PIR interrupt
 }
 
 ///////////// MAIN LOOP //////////////////
 void loop(){
-  goToSleep();
   if(motion == 1){
-    checkBattery();
-    if(lowBat == 0){
-      scrollMessage();
+    delay(500); //debounce the PIR sensor (lower sensitivity)
+    if(digitalRead(PIR_PIN)){
+      float batVolt = checkBattery();
+      if(batVolt < 3.3){
+        lowBattery();
+      } else {
+        scrollMessage();
+      }
     }
+    delay(3000);
+    motion = 0; //reset the flag
+    attachInterrupt(digitalPinToInterrupt(PIR_PIN), isr, RISING); //start the PIR interrupt
   }
 }
 
@@ -83,7 +90,6 @@ void loop(){
 void isr() { 
   detachInterrupt(digitalPinToInterrupt(PIR_PIN));  //stop the interrupt from being called during processing
   motion = 1; //set motion variable
-  sleep_disable();  //wake up
 }
 
 // Random message scroller
@@ -101,45 +107,33 @@ void scrollMessage(){
       nLoops++; //
     }
   }
-  motion = 0; //reset the flag
 }
 
 // Report battery voltage and set lowBat
-void checkBattery(){
+float checkBattery(){
   int batIn = analogRead(BAT_PIN);
   float batVoltage = batIn*(5.0/1023.0);
   PRINTS("\nBattery: ");
   PRINTS(batVoltage);
   PRINTS("V");
-  if(batVoltage < 3.2) {  //scroll "Low Battery" when voltage below 3.2V
-    lowBat = 1;
-    uint8_t nLoops = 0; //number of times to display the message
-    P.displayReset();
-    P.displayText("Low Battery", scrollAlign, scrollSpeed, scrollPause, scrollEffect, scrollEffect);  //display a random message
-    while(nLoops < 2){  //wait until the message has displayed twice
-      if (P.displayAnimate()){  //update the display (call repeatedly)
-        P.displayReset(); 
-        nLoops++; //
-      }
-    }
-    motion = 0; //reset the flag
-  }
-  else {
-    lowBat = 0; // battery is not low
-  }
+  return batVoltage;
 }
 
-void goToSleep(){
-  PRINTS("\nSleep time\n");
-  sleep_enable(); // enable sleep mode
-  attachInterrupt(digitalPinToInterrupt(PIR_PIN), isr, RISING); //start the PIR interrupt
-  set_sleep_mode(SLEEP_MODE_EXT_STANDBY);
-  delay(100);
-  sleep_cpu();
-  delay(10);
+// Low battery warning
+void lowBattery(){
+  uint8_t nLoops = 0; //number of times to display the message
+  P.displayReset();
+  P.displayText("Low Battery", scrollAlign, scrollSpeed, scrollPause, scrollEffect, scrollEffect);  //display a random message
+  while(nLoops < 2){  //wait until the message has displayed twice
+    if (P.displayAnimate()){  //update the display (call repeatedly)
+      P.displayReset(); 
+      nLoops++; //
+    }
+  }
 }
 
 /*
  * To-do
  * - More noticable low battery warning
+ * - Fix issue where the MCU does not wake up after sleep (CH340 issue?, battery module issue?)
  */
