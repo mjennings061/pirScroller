@@ -8,7 +8,7 @@
 #include <MD_Parola.h>
 #include <MD_MAX72xx.h>
 #include <SPI.h>
-//#include <avr/sleep.h>
+#include <avr/sleep.h>
 
 // Turn on debug statements to the serial output
 #define DEBUG 0 // Switch debug output on and off by 1 or 0
@@ -22,12 +22,12 @@
 // NOTE: These pin numbers will probably not work with your hardware and may
 // need to be adapted
 #define HARDWARE_TYPE MD_MAX72XX::FC16_HW //display hardware
-#define MAX_DEVICES 4 //number of LED displays
-#define CLK_PIN   13  //clock
-#define DATA_PIN  11  //data pin
-#define CS_PIN    10  //clock select pin
-#define PIR_PIN   2   //PIR pin
-#define BAT_PIN   A4  //battery pin
+#define MAX_DEVICES   4   //number of LED displays
+#define CLK_PIN       13  //clock
+#define DATA_PIN      11  //data pin
+#define CS_PIN        10  //clock select pin
+#define BAT_PIN       A4  //battery pin
+#define LED_PIN       13  //inbuilt LED
 
 // LED matrix variables
 MD_Parola P = MD_Parola(HARDWARE_TYPE, CS_PIN, MAX_DEVICES);
@@ -59,6 +59,7 @@ char message[NUM_MSGS][BUF_SIZE] = {  //display messages - max length 75 charact
                                     "I do desire we may be better strangers."
                                     };
 volatile byte motion = 0; //ISR trigger for the PIR sensor
+uint8_t lowbatCount = 0;
 
 ///////////// SETUP //////////////////
 void setup(){
@@ -66,7 +67,6 @@ void setup(){
     Serial.begin(115200);
   #endif
   PRINTS("\nPIR Scrolly boi. Trigger me by walking in front of the sensor");
-  pinMode(PIR_PIN, INPUT);
   pinMode(BAT_PIN, INPUT);
   randomSeed(analogRead(0)); //for the random num generator
 
@@ -76,31 +76,44 @@ void setup(){
   while(!P.displayAnimate()){;} //scroll the text once
   P.displayClear();
   delay(1000);
-  attachInterrupt(digitalPinToInterrupt(PIR_PIN), isr, RISING); //start the PIR interrupt
 }
 
 ///////////// MAIN LOOP //////////////////
 void loop(){
-  if(motion == 1){
-    delay(500); //debounce the PIR sensor (lower sensitivity)
-    if(digitalRead(PIR_PIN)){
-      float batVolt = checkBattery();
-      if(batVolt < 3.3){
-        lowBattery();
-      } else {
-        scrollMessage();
-      }
-    }
-    delay(3000);
-    motion = 0; //reset the flag
-    attachInterrupt(digitalPinToInterrupt(PIR_PIN), isr, RISING); //start the PIR interrupt
+  float batVolt = checkBattery();
+  if(batVolt < 3.3){
+    lowBattery();
+  } else {
+    scrollMessage();
   }
+  sleepTime();
+  //// MCU IS ASLEEP HERE ////
 }
 
 // Interrupt service routine
-void isr() { 
-  detachInterrupt(digitalPinToInterrupt(PIR_PIN));  //stop the interrupt from being called during processing
-  motion = 1; //set motion variable
+void wake (){
+  // cancel sleep as a precaution
+  sleep_disable();
+  ADCSRA |= (1 << 7); //turn ADC on
+  // precautionary while we do other stuff
+  detachInterrupt (0);
+}  // end of wake
+
+// Put the MCU to sleep
+void sleepTime(){
+  ADCSRA = 0; // disable ADC
+  set_sleep_mode (SLEEP_MODE_PWR_DOWN);  
+  sleep_enable();
+
+  // Do not interrupt before we go to sleep, or the
+  // ISR will detach interrupts and we won't wake.
+  noInterrupts ();
+  
+  // will be called when pin D2 goes low  
+  attachInterrupt (0, wake, RISING);
+  EIFR = bit(INTF0);  // clear flag for interrupt 0
+  interrupts ();  // one cycle, allows next line's execution before sleeping
+  sleep_cpu ();   // one cycle
 }
 
 // Random message scroller
@@ -118,6 +131,7 @@ void scrollMessage(){
       nLoops++; //
     }
   }
+  delay(1000);
 }
 
 // Report battery voltage and set lowBat
@@ -141,6 +155,7 @@ void lowBattery(){
       nLoops++; //
     }
   }
+  delay(1000);
 }
 
 /*
