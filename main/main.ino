@@ -58,8 +58,6 @@ char message[NUM_MSGS][BUF_SIZE] = {  //display messages - max length 75 charact
                                     "You are about one bit short of a byte.",
                                     "I do desire we may be better strangers."
                                     };
-volatile byte motion = 0; //ISR trigger for the PIR sensor
-uint8_t lowbatCount = 0;
 
 ///////////// SETUP //////////////////
 void setup(){
@@ -68,9 +66,14 @@ void setup(){
   #endif
   PRINTS("\nPIR Scrolly boi. Trigger me by walking in front of the sensor");
   pinMode(BAT_PIN, INPUT);
+  pinMode(LED_PIN, OUTPUT);
+  for(byte i=0;i<5;i++){  //flash LED to show its working
+    flashLED();
+  }
+  digitalWrite(LED_PIN, 1);
   randomSeed(analogRead(0)); //for the random num generator
 
-  //setip the display
+  //setup the display
   P.begin();
   P.displayText(startMessage, scrollAlign, scrollSpeed, scrollPause, scrollEffect, scrollEffect); //starting message
   while(!P.displayAnimate()){;} //scroll the text once
@@ -80,23 +83,22 @@ void setup(){
 
 ///////////// MAIN LOOP //////////////////
 void loop(){
-  float batVolt = checkBattery();
-  if(batVolt < 3.3){
-    lowBattery();
-  } else {
+  float batVolt = checkBattery(); // check the battery voltage
+  if(batVolt <= 3.3 && batVolt > 3.1){  // if its above 3.3V but below 3.1V 
+    lowBattery(batVolt);                // display a low battery message
+  } else if(batVolt > 3.3){             // if its in normal range
     scrollMessage();
   }
-  sleepTime();
+  flashLED();
+  sleepTime();  //put the CPU to sleep
   //// MCU IS ASLEEP HERE ////
 }
 
 // Interrupt service routine
 void wake (){
-  // cancel sleep as a precaution
-  sleep_disable();
-  ADCSRA |= (1 << 7); //turn ADC on
-  // precautionary while we do other stuff
-  detachInterrupt (0);
+  sleep_disable(); // cancel sleep as a precaution
+  ADCSRA |= (1 << 7); // turn ADC on
+  detachInterrupt (0); // precautionary while we do other stuff
 }  // end of wake
 
 // Put the MCU to sleep
@@ -104,13 +106,8 @@ void sleepTime(){
   ADCSRA = 0; // disable ADC
   set_sleep_mode (SLEEP_MODE_PWR_DOWN);  
   sleep_enable();
-
-  // Do not interrupt before we go to sleep, or the
-  // ISR will detach interrupts and we won't wake.
-  noInterrupts ();
-  
-  // will be called when pin D2 goes low  
-  attachInterrupt (0, wake, RISING);
+  noInterrupts (); // Do not interrupt before we go to sleep
+  attachInterrupt (0, wake, RISING); // will be called when pin D2 goes high 
   EIFR = bit(INTF0);  // clear flag for interrupt 0
   interrupts ();  // one cycle, allows next line's execution before sleeping
   sleep_cpu ();   // one cycle
@@ -145,10 +142,14 @@ float checkBattery(){
 }
 
 // Low battery warning
-void lowBattery(){
+void lowBattery(float voltage){
   uint8_t nLoops = 0; //number of times to display the message
+  String outString = "Low Battery: " + String(voltage);  // make a string with the battery voltage
+  char outChar[20];
+  outString.toCharArray(outChar,20);  //convert string to char array
+  
   P.displayReset();
-  P.displayText("Low Battery", scrollAlign, scrollSpeed, scrollPause, scrollEffect, scrollEffect);  //display a random message
+  P.displayText(outChar, scrollAlign, scrollSpeed, scrollPause, scrollEffect, scrollEffect);  //display a random message
   while(nLoops < 2){  //wait until the message has displayed twice
     if (P.displayAnimate()){  //update the display (call repeatedly)
       P.displayReset(); 
@@ -158,8 +159,15 @@ void lowBattery(){
   delay(1000);
 }
 
+// Flash the LED
+void flashLED(void){
+  digitalWrite(LED_PIN, 1);
+  delay(50);
+  digitalWrite(LED_PIN, 0);
+  delay(50);
+}
+
 /*
  * To-do
  * - More noticable low battery warning
- * - Fix issue where the MCU does not wake up after sleep (CH340 issue?, battery module issue?)
  */
