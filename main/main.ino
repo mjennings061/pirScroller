@@ -2,7 +2,7 @@
  * pirScroller
  * Preset message will be displayed on a 32x8 LED matrix when a PIR sensor is triggered
  * Copyright: Michael Jennings - www.github.com/mjennings061/
- * Last Updated: 12/04/2020
+ * Last Updated: 13/04/2020
 */
 
 #include <MD_Parola.h>
@@ -36,7 +36,7 @@ textEffect_t scrollEffect = PA_SCROLL_LEFT;
 textPosition_t scrollAlign = PA_LEFT;
 uint16_t scrollPause = 1000; // in milliseconds
 // Global message buffers shared by Serial and Scrolling functions
-#define	BUF_SIZE	50
+#define	BUF_SIZE	30  //max length of messages
 #define NUM_MSGS 17  //update this with the number of messages
 char startMessage[BUF_SIZE] = {"Scrolly boi V1"};
 char message[NUM_MSGS][BUF_SIZE] = {  //display messages - max length 75 characters
@@ -45,7 +45,7 @@ char message[NUM_MSGS][BUF_SIZE] = {  //display messages - max length 75 charact
                                     "Careful, you're shaking the floor",
                                     "Not you again..",
                                     "If stupidity was painful, you'd be in agony",
-                                    "If I throw a stick, will you go away?",
+                                    "Oh lawd he comin",
                                     "Can you not take a hint?",
                                     "I only sense oxygen-thieves",
                                     "Get COVID-19 please",
@@ -87,7 +87,7 @@ void loop(){
   if(batVolt <= 3.3 && batVolt > 3.1){  // if its above 3.3V but below 3.1V 
     lowBattery(batVolt);                // display a low battery message
   } else if(batVolt > 3.3){             // if its in normal range
-    scrollMessage();
+    scrollMessage();                    // scroll a random message
   }
   flashLED();
   sleepTime();  //put the CPU to sleep
