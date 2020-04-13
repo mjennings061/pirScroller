@@ -36,16 +36,27 @@ textEffect_t scrollEffect = PA_SCROLL_LEFT;
 textPosition_t scrollAlign = PA_LEFT;
 uint16_t scrollPause = 1000; // in milliseconds
 // Global message buffers shared by Serial and Scrolling functions
-#define	BUF_SIZE	75
-#define NUM_MSGS 6  //update this with the number of messages
+#define	BUF_SIZE	50
+#define NUM_MSGS 17  //update this with the number of messages
 char startMessage[BUF_SIZE] = {"Scrolly boi V1"};
 char message[NUM_MSGS][BUF_SIZE] = {  //display messages - max length 75 characters
-                                    "Welcome to No.42",
-                                    "Don't let your memes be dreams",
-                                    "The mitochondria are the powerhouses of the cell",
-                                    "I am a PIR sensor",
-                                    "We are bored students",
-                                    "Delivery drivers are great people"
+                                    "Welcome, now leave",
+                                    "Your face makes onions cry",
+                                    "Careful, you're shaking the floor",
+                                    "Not you again..",
+                                    "If stupidity was painful, you'd be in agony",
+                                    "If I throw a stick, will you go away?",
+                                    "Can you not take a hint?",
+                                    "I only sense oxygen-thieves",
+                                    "Get COVID-19 please",
+                                    "Make like a tree and leaf",
+                                    "Make like a saw and buzz off",
+                                    "Be like me, inanimate",
+                                    "You sure you want to be seen like that?",
+                                    "If you had brains, you'd be dangerous",
+                                    "Get rekt fgt",
+                                    "You are about one bit short of a byte.",
+                                    "I do desire we may be better strangers."
                                     };
 volatile byte motion = 0; //ISR trigger for the PIR sensor
 
