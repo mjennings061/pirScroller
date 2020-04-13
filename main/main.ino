@@ -26,8 +26,7 @@
 #define CLK_PIN       13  //clock
 #define DATA_PIN      11  //data pin
 #define CS_PIN        10  //clock select pin
-#define BAT_PIN       A4  //battery pin
-#define LED_PIN       13  //inbuilt LED
+#define BAT_PIN       A5  //battery pin
 
 // LED matrix variables
 MD_Parola P = MD_Parola(HARDWARE_TYPE, CS_PIN, MAX_DEVICES);
@@ -36,7 +35,7 @@ textEffect_t scrollEffect = PA_SCROLL_LEFT;
 textPosition_t scrollAlign = PA_LEFT;
 uint16_t scrollPause = 1000; // in milliseconds
 // Global message buffers shared by Serial and Scrolling functions
-#define	BUF_SIZE	30  //max length of messages
+#define	BUF_SIZE	40  //max length of messages
 #define NUM_MSGS 17  //update this with the number of messages
 char startMessage[BUF_SIZE] = {"Scrolly boi V1"};
 char message[NUM_MSGS][BUF_SIZE] = {  //display messages - max length 75 characters
@@ -44,7 +43,7 @@ char message[NUM_MSGS][BUF_SIZE] = {  //display messages - max length 75 charact
                                     "Your face makes onions cry",
                                     "Careful, you're shaking the floor",
                                     "Not you again..",
-                                    "If stupidity was painful, you'd be in agony",
+                                    "If stupidity was painful, you would be in agony",
                                     "Oh lawd he comin",
                                     "Can you not take a hint?",
                                     "I only sense oxygen-thieves",
@@ -55,9 +54,11 @@ char message[NUM_MSGS][BUF_SIZE] = {  //display messages - max length 75 charact
                                     "You sure you want to be seen like that?",
                                     "If you had brains, you'd be dangerous",
                                     "Get rekt fgt",
-                                    "You are about one bit short of a byte.",
-                                    "I do desire we may be better strangers."
+                                    "You are about one bit short of a byte",
+                                    "I do desire we may be better strangers"
                                     };
+uint8_t adcReg = 0; // ADC register's startup state
+float batVolt = 0;  //global battery voltage
 
 ///////////// SETUP //////////////////
 void setup(){
@@ -65,17 +66,25 @@ void setup(){
     Serial.begin(115200);
   #endif
   PRINTS("\nPIR Scrolly boi. Trigger me by walking in front of the sensor");
-  pinMode(BAT_PIN, INPUT);
-  pinMode(LED_PIN, OUTPUT);
-  for(byte i=0;i<5;i++){  //flash LED to show its working
-    flashLED();
-  }
-  digitalWrite(LED_PIN, 1);
   randomSeed(analogRead(0)); //for the random num generator
+  
 
   //setup the display
+  batVolt = checkBattery(); //check the battery voltage during startup
+  String batString = "Battery: " + String(batVolt) + "V";  // make a string with the battery voltage
+  char batChar[BUF_SIZE];
+  batString.toCharArray(batChar,BUF_SIZE);  //convert string to char array
+
+  // Welcome message
   P.begin();
   P.displayText(startMessage, scrollAlign, scrollSpeed, scrollPause, scrollEffect, scrollEffect); //starting message
+  while(!P.displayAnimate()){;} //scroll the text once
+  P.displayClear();
+  delay(500);
+
+  // Show battery
+  P.displayReset();
+  P.displayText(batChar, scrollAlign, scrollSpeed, scrollPause, scrollEffect, scrollEffect); //starting message
   while(!P.displayAnimate()){;} //scroll the text once
   P.displayClear();
   delay(1000);
@@ -83,21 +92,20 @@ void setup(){
 
 ///////////// MAIN LOOP //////////////////
 void loop(){
-  float batVolt = checkBattery(); // check the battery voltage
-  if(batVolt <= 3.3 && batVolt > 3.1){  // if its above 3.3V but below 3.1V 
+  batVolt = checkBattery();       // check the battery voltage
+  if(batVolt <= 3.5 && batVolt > 3.2){  // if its above 3.3V but below 3.1V 
     lowBattery(batVolt);                // display a low battery message
   } else if(batVolt > 3.3){             // if its in normal range
     scrollMessage();                    // scroll a random message
   }
-  flashLED();
   sleepTime();  //put the CPU to sleep
   //// MCU IS ASLEEP HERE ////
 }
 
 // Interrupt service routine
 void wake (){
-  sleep_disable(); // cancel sleep as a precaution
-  ADCSRA |= (1 << 7); // turn ADC on
+  sleep_disable();  // cancel sleep as a precaution
+  ADCSRA = adcReg;  //turn the ADC back on
   detachInterrupt (0); // precautionary while we do other stuff
 }  // end of wake
 
@@ -131,13 +139,15 @@ void scrollMessage(){
   delay(1000);
 }
 
-// Report battery voltage and set lowBat
+// Report battery voltage
 float checkBattery(){
   int batIn = analogRead(BAT_PIN);
-  float batVoltage = batIn*(5.0/1023.0);
+  float batIn_float = float(batIn);
+  float batVoltage = batIn_float*(5.0/1023.0);
   PRINTS("\nBattery: ");
   PRINTS(batVoltage);
-  PRINTS("V");
+  PRINTS("V\tRaw: ");
+  PRINTS(batIn)
   return batVoltage;
 }
 
@@ -157,14 +167,6 @@ void lowBattery(float voltage){
     }
   }
   delay(1000);
-}
-
-// Flash the LED
-void flashLED(void){
-  digitalWrite(LED_PIN, 1);
-  delay(50);
-  digitalWrite(LED_PIN, 0);
-  delay(50);
 }
 
 /*
